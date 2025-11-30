@@ -302,11 +302,19 @@ inline fn handleSystemKey(self: *Skhd, event: c.CGEventRef) !c.CGEventRef {
     }
 
     var eventkey: Hotkey.KeyPress = undefined;
-    if (interceptSystemKey(event, &eventkey)) {
+    const aux_control_keydown = interceptSystemKey(event, &eventkey);
+    if (aux_control_keydown) {
         const result = try self.processHotkey(&eventkey, event, process_name);
         return try self.handleHotkeyResult(result, event, eventkey, process_name);
     }
 
+    // We need to explicitly ignore the `NX_KEYUP` event for 'rewind'/'fast'
+    // otherwise the default behaviour still triggers.
+    if ((eventkey.key == c.NX_KEYTYPE_REWIND or
+         eventkey.key == c.NX_KEYTYPE_FAST)) {
+        std.debug.print("Ignored 'rewind'/'fast' keyup event\n", .{});
+        return null;
+    }
     return event;
 }
 
@@ -405,13 +413,14 @@ pub inline fn interceptSystemKey(event: c.CGEventRef, eventkey: *Hotkey.KeyPress
     const NX_KEYDOWN: u8 = 0x0A;
     const NX_SUBTYPE_AUX_CONTROL_BUTTONS: u8 = 8;
 
+    // Note: the `event_tap.mask` only masks `kCGEventKeyDown` and
+    // `NX_SYSDEFINED`, this should mean that we do not receive any `NX_KEYUP`
+    // events, but they still seem to appear?
     const result = (key_state == NX_KEYDOWN) and (key_stype == NX_SUBTYPE_AUX_CONTROL_BUTTONS);
 
-    if (result) {
-        eventkey.key = key_code;
-        eventkey.flags = cgeventFlagsToHotkeyFlags(c.CGEventGetFlags(event));
-        eventkey.flags.nx = true;
-    }
+    eventkey.key = key_code;
+    eventkey.flags = cgeventFlagsToHotkeyFlags(c.CGEventGetFlags(event));
+    eventkey.flags.nx = result;
 
     return result;
 }
