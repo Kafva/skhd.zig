@@ -1,6 +1,8 @@
 const std = @import("std");
+const skhd = @import("skhd.zig");
 const EventTap = @import("EventTap.zig");
 const Keycodes = @import("Keycodes.zig");
+const Hotkey = @import("Hotkey.zig");
 
 const c = @import("c.zig");
 
@@ -34,8 +36,11 @@ fn callback(_: c.CGEventTapProxy, typ: c.CGEventType, event: c.CGEventRef, _: ?*
             return @ptrFromInt(0);
         },
         c.NX_SYSDEFINED => {
-            printSystemKey(event);
-            return event;
+            var eventkey: Hotkey.KeyPress = undefined;
+            if (skhd.interceptSystemKey(event, &eventkey)) {
+                std.debug.print("NX_SYSDEFINED {d}\n", .{eventkey.key});
+            }
+            return @ptrFromInt(0);
         },
         else => {
             // std.debug.print("Event type: {any}\n", .{typ});
