@@ -393,7 +393,7 @@ inline fn cgeventFlagsToHotkeyFlags(event_flags: c.CGEventFlags) ModifierFlag {
     return flags;
 }
 
-inline fn interceptSystemKey(event: c.CGEventRef, eventkey: *Hotkey.KeyPress) bool {
+pub inline fn interceptSystemKey(event: c.CGEventRef, eventkey: *Hotkey.KeyPress) bool {
     const event_data = c.CGEventCreateData(c.kCFAllocatorDefault, event);
     defer c.CFRelease(event_data);
 

@@ -1,6 +1,8 @@
 const std = @import("std");
+const skhd = @import("skhd.zig");
 const EventTap = @import("EventTap.zig");
 const Keycodes = @import("Keycodes.zig");
+const Hotkey = @import("Hotkey.zig");
 
 const c = @import("c.zig");
 
@@ -12,7 +14,8 @@ pub fn echo() !void {
         (1 << c.kCGEventFlagsChanged) |
         (1 << c.kCGEventLeftMouseDown) |
         (1 << c.kCGEventRightMouseDown) |
-        (1 << c.kCGEventOtherMouseDown);
+        (1 << c.kCGEventOtherMouseDown) |
+        (1 << c.NX_SYSDEFINED);
     var event_tap = EventTap{ .mask = mask };
     defer event_tap.deinit();
     std.debug.print("Ctrl+C to exit\n", .{});
@@ -30,6 +33,13 @@ fn callback(_: c.CGEventTapProxy, typ: c.CGEventType, event: c.CGEventRef, _: ?*
         c.kCGEventLeftMouseDown, c.kCGEventRightMouseDown, c.kCGEventOtherMouseDown => {
             const button = c.CGEventGetIntegerValueField(event, c.kCGMouseEventButtonNumber);
             std.debug.print("Mouse button: {d}\n", .{button});
+            return @ptrFromInt(0);
+        },
+        c.NX_SYSDEFINED => {
+            var eventkey: Hotkey.KeyPress = undefined;
+            if (skhd.interceptSystemKey(event, &eventkey)) {
+                std.debug.print("NX_SYSDEFINED {d}\n", .{eventkey.key});
+            }
             return @ptrFromInt(0);
         },
         else => {
